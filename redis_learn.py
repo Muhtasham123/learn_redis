@@ -5,7 +5,6 @@ import json
 # connect to redis
 r = redis.Redis(host="localhost", port=6379, decode_responses=True)
 
-r.flushdb()
 # simple string keys and value usage
 r.set("name", "Muhtasham")
 r.set("age", 21)
@@ -44,6 +43,19 @@ r.sadd("friends:user:1", "Ali", "Hina", "sara")
 r.sadd("friends:user:2", "Ahmed", "Hina", "sara")
 
 print(r.sinter("friends:user:1", "friends:user:2"))
+
 # set with scores usage
+r.zadd("leaderboard", {"waqas":1000, "ali": 500, "sara":1500})
+print(r.zrevrange("leaderboard", 0, 2, withscores=True))
+print(r.zrevrank("leaderboard", "waqas"))
+r.zincrby("leaderboard", 1000, "waqas")
+print(r.zrevrange("leaderboard", 0, 2, withscores=True))
+
 # json storage
-# some utility commands
+data = {"name":"Muhtasham", "age":21}
+r.set("user", json.dumps(data), ex=3600)
+cached = r.get("user")
+print(json.loads(cached))
+
+# clearing everything from memory
+r.flushdb()
