@@ -1,6 +1,7 @@
 import redis
 import json
 from time import sleep
+import secrets
 
 r = redis.Redis(host="localhost", port=6379, decode_responses=True)
 # Pretend this is your database
@@ -64,4 +65,89 @@ def get_product(product_id, user_id):
     except Exception as e:
         print("ERROR", e)
 
-get_product(1,1)
+#UPDATE PRICE FUNCTION
+def update_price(product_id, new_price):
+    try:
+        # update price in db
+        product = FAKE_DB.get(product_id)
+        if product:
+            product["price"] = new_price
+
+        # delete key from redis
+        r.delete(f'product:{product_id}')
+
+    except Exception as e:
+        print("ERROR", e)
+
+#INCREMENT PRODUCT VIEWS FUNCTION
+def increment_views(product_id):
+    try:
+        r.incr(f'product:{product_id}:views')
+        # background worker will sync with DB
+
+    except Exception as e:
+        print("ERROR", e)
+
+
+#RATE LIMITER
+MAX_REQUESTS = 10
+def rate_limiter(ip):
+    try:
+        count = r.incr(f'requests:{ip}')
+
+        if count == 1:
+            r.expire(f'requests:{ip}', 60)
+
+        if count > MAX_REQUESTS:
+            return False
+
+        return True
+    
+    except Exception as e:
+        print("ERROR", e)
+
+
+#SESSION STORAGE
+def login(email, password):
+    try:
+        # verify credentials from DB
+        user = FAKE_USERS.get(email)
+        if user is None or password != user.get("password"):
+            return "Invalid credentials"
+
+        # Else create  token and store a session in redis
+        token = secrets.token_hex(16)
+        r.set(f'session:{token}', json.dumps({"id":user["id"], "name":user["name"]}), 3600)
+        return token
+
+    except Exception as e:
+        print("ERROR", e)
+
+#AUTHORIZE TOKEN
+def get_me(token):
+    try:
+        session = r.get(f'session:{token}')
+
+        if session:
+            return json.loads(session)
+        
+        return "Not autorized"
+
+    except Exception as e:
+        print("ERROR", e)
+
+
+#LIKES INCREMENT
+def incement_likes(product_id, user_id):
+    try:
+        r.sadd(f'likes:{product_id}', user_id)
+        # background worker will sync with db
+    except Exception as e:
+        print("ERROR", e)
+
+#GET LIKES OF A PRODUCT
+def get_likes(product_id):
+    try:
+        return r.scard(f'likes:{product_id}')
+    except Exception as e:
+        print("ERROR", e)
