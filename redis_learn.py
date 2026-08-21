@@ -44,7 +44,7 @@ r.sadd("friends:user:2", "Ahmed", "Hina", "sara")
 
 print(r.sinter("friends:user:1", "friends:user:2"))
 
-# set with scores usage
+# sorted sets with scores usage
 r.zadd("leaderboard", {"waqas":1000, "ali": 500, "sara":1500})
 print(r.zrevrange("leaderboard", 0, 2, withscores=True))
 print(r.zrevrank("leaderboard", "waqas"))
